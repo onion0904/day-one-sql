@@ -7,15 +7,33 @@ import (
 	"time"
 )
 
+func CheckUser(db *sql.DB, username string) bool {
+	q := `
+	SELECT *
+	FROM users
+	WHERE user_name = $1
+	`
+	var foundUsername string
+	err := db.QueryRow(q, username).Scan(&foundUsername)
+	if err != nil {
+		if err == sql.ErrNoRows{
+			return false
+		}
+		log.Printf("Error checking user %s: %v", username, err)
+		return false
+	}
+	return true
+}
+
 func InsertUser(db *sql.DB, username string){
 	// query
 	q := `
-	INSERT INTO user (
+	INSERT INTO users (
 	user_name
-	),
+	)
 	VALUES (
 	$1
-	),
+	);
 	`
 	_, err := db.Exec(q, username)// 結果がいらないときはExec。返り値は影響の受けた情報
 	if err != nil {
@@ -26,7 +44,7 @@ func InsertUser(db *sql.DB, username string){
 
 func DeleteUser(db *sql.DB, username string){
 	q := `
-	DELETE FROM user
+	DELETE FROM users
 	WHERE user_name = $1
 	`
 	_, err := db.Exec(q, username)
@@ -39,7 +57,7 @@ func DeleteUser(db *sql.DB, username string){
 func UpsertDiary(db *sql.DB, user_name,date,content string){
 	q := `
 	INSERT INTO diary (
-	user_name
+	user_name,
 	diary_date,
 	diary_content
 	)
@@ -48,7 +66,7 @@ func UpsertDiary(db *sql.DB, user_name,date,content string){
 	$2,
 	$3
 	)
-	ON CONFLICT (diary_date) DO UPDATE SET
+	ON CONFLICT (user_name, diary_date) DO UPDATE SET
 	diary_content = EXCLUDED.diary_content;
 	`
 	layout := "2006-01-02"
@@ -69,7 +87,7 @@ func ShowDiary(db *sql.DB, user_name,input string){
 	if input == "all" {
 		// SELECT * にしてしまうとjunctionの列も取得してしまう
 		q = `
-		SELECT *
+		SELECT diary_date, diary_content
 		FROM diary
 		WHERE user_name = $1;
 		`
@@ -81,7 +99,7 @@ func ShowDiary(db *sql.DB, user_name,input string){
 	}else if ok {
 		// user_nameとdiary_dateが一致するdiaryを取得
 		q = `
-		SELECT *
+		SELECT diary_date, diary_content
 		FROM diary
 		WHERE user_name =$1
 		AND diary_date = $2;
@@ -93,12 +111,12 @@ func ShowDiary(db *sql.DB, user_name,input string){
 		PrintShow(rows)
 	}else {
 		q = `
-		SELECT *
+		SELECT diary_date, diary_content
 		FROM diary
 		WHERE diary_content LIKE $1
 		AND user_name = $2;
 		`
-		rows, err := db.Query(q,input,user_name)
+		rows, err := db.Query(q,"%"+input+"%",user_name)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -125,16 +143,17 @@ func PrintShow(rows *sql.Rows){
 	for rows.Next() {
 		var date time.Time
 		var content string
-		if err := rows.Scan(&date); err != nil{
-			log.Fatal(err)
-		}
-		if err := rows.Scan(&content); err != nil{
+		if err := rows.Scan(&date, &content); err != nil{
 			log.Fatal(err)
 		}
 		diaries = append(diaries, &diary{date, content})
 	}
+	if len(diaries) == 0 {
+		fmt.Println("表示する日記がありません。") // データがない場合のメッセージ
+		return
+	}
 	for _,v := range diaries{
-		fmt.Println("date ", v.date, "content ", v.content)
+		fmt.Println("date ", v.date.Format("2006-01-02"), "content ", v.content)
 	}
 }
 
