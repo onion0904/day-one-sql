@@ -2,13 +2,13 @@
 
 ## DAY1
 onion0904の7日間チャレンジの一日目です。
-詳しくは[zenn]()
+詳しくは[zenn](https://zenn.dev/onion0904/articles/ff700890522030)
 
 ## 作ったもの
-*CLI日記(標準入力から操作)*
-:::note info
+
+CLI日記(標準入力から操作)
+
 ""で囲まれてる部分は自分で変えて入力してください
-:::
 
 - 一行目(ユーザー)
     - "username"(ユーザー作成していない人は作成される)
@@ -31,3 +31,9 @@ onion0904の7日間チャレンジの一日目です。
         - "2004-09-04" (日付)
 
 ## 入力例
+```
+go run main.go
+input UserOperation: onion0904
+input operation: upsert
+input date and content: 2025-05-30 徹夜した
+```
